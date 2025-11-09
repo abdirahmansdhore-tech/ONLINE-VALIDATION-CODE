@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Digital Twin Validation & Calibration System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:400,500,700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background: #ECECEC;
+            font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+            color: #222;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .dashboard-title {
+            color: #222;
+            font-size: 2.2em;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 12px;
+            letter-spacing: 1px;
+        }
+        .card {
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(60,60,60,0.08);
+            margin-bottom: 24px;
+            background: #F9FAFB;
+            border: 1.5px solid #D1D5DB;
+        }
+        .card-header {
+            background: linear-gradient(90deg,#E8EAED 80%,#D1D5DB 100%);
+            font-weight: 600;
+            border-bottom: 2px solid #D1D5DB;
+            border-radius: 12px 12px 0 0 !important;
+            font-size: 1.08em;
+            color: #0057B8;
+        }
+        .validation-group-card {
+            background: #fff;
+            border: 2.5px solid #0057B8;
+            border-radius: 16px;
+            padding: 32px 40px 32px 40px;
+            margin-bottom: 18px;
+            max-width: 1350px;
+            margin-left: auto;
+            margin-right: auto;
+            width: 100%;
+            box-shadow: 0 4px 20px rgba(0,87,184,0.08);
+            transition: box-shadow 0.2s;
+            overflow-x: auto;
+        }
+        .validation-title {
+            font-size: 1.38em;
+            color: #0057B8;
+            font-weight: 700;
+            margin-bottom: 18px;
+            letter-spacing: 0.06em;
+            text-shadow: 0 1px 0 #e5e7eb;
+        }
+        .validation-row {
+            display: flex;
+            flex-direction: row;
+            justify-content: center;
+            align-items: stretch;
+            gap: 36px;
+            width: 100%;
+            max-width: 1150px;
+            margin: 0 auto;
+        }
+        .validation-card {
+            background: #F7F8FA;
+            border: 2.5px solid #D1D5DB;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            box-shadow: 0 2px 10px rgba(0,87,184,0.07);
+            padding: 38px 24px 32px 24px;
+            transition: max-width 0.2s, min-width 0.2s;
+        }
+        .validation-card.single {
+            flex: 1 1 0;
+            max-width: 1000px;
+            min-width: 480px;
+        }
+        .validation-card.double {
+            flex: 1 1 0;
+            max-width: 480px;
+            min-width: 320px;
+        }
+        .validation-value {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        .lcss-color { color: #0057B8; text-shadow: 0 1px 0 #e5e7eb; }
+        .mlcss-color { color: #3A3A3C; }
+        .dtw-color { color: #FF6600; text-shadow: 0 1px 0 #e5e7eb; }
+        .validation-label {
+            font-size: 1.17em;
+            font-weight: 500;
+            color: #495057;
+            margin-bottom: 8px;
+            letter-spacing: 0.03em;
+        }
+        .validation-sublabel {
+            font-size: 0.9em;
+            color: #6c757d;
+            margin-top: -5px;
+            font-style: italic;
+        }
+        .trending-chart {
+            width: 100% !important;
+            max-width: 470px !important;
+            height: 92px !important;
+            margin-top: 34px;
+            display: block;
+            background: transparent;
+        }
+        .station-card {
+            min-height: 80px;
+            border-radius: 9px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 15px;
+            text-align: center;
+            margin: 5px 0;
+            color: #fff;
+            background: linear-gradient(135deg, #1d3557, #457b9d);
+            border: 1.5px solid #b9c6d9;
+            box-shadow: 0 1px 2px rgba(50, 50, 70, 0.07);
+        }
+        .station-card.idle { background: linear-gradient(135deg, #28a745, #20c997); }
+        .station-card.busy { background: linear-gradient(135deg, #ffc107, #fd7e14); }
+        .station-card.processing { background: linear-gradient(135deg, #007bff, #6610f2); }
+        .station-card.failed { background: linear-gradient(135deg, #dc3545, #e83e8c); }
+        .station-card.loading { background: linear-gradient(135deg, #17a2b8, #6f42c1); }
+        .station-card.unloading { background: linear-gradient(135deg, #6c757d, #495057); }
+        
+        .status-box {
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            margin: 5px 0;
+        }
+        .status-connected { background-color: #d4edda; color: #155724; }
+        .status-disconnected { background-color: #f8d7da; color: #721c24; }
+        .status-running { background-color: #cce7ff; color: #004085; }
+        .status-stopped { background-color: #fff3cd; color: #856404; }
+        .status-active { background-color: #d1ecf1; color: #0c5460; }
+        .status-inactive { background-color: #f8f9fa; color: #6c757d; }
+        
+        .kpi-metric-info {
+            background: #e7f3ff;
+            border: 1px solid #0057B8;
+            border-radius: 6px;
+            padding: 8px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        
+        .activity-log {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #fff;
+            border-radius: 8px;
+            padding: 10px;
+            border: 1px solid #e5e7eb;
+        }
+        .log-entry {
+            padding: 5px 0 5px 0;
+            border-bottom: 1px solid #f1f1f1;
+            font-size: 0.97rem;
+        }
+        .btn-primary, .btn-success, .btn-danger, .btn-warning, .btn-info {
+            font-weight: 500;
+            letter-spacing: .5px;
+            margin: 2px;
+        }
+        .btn-primary {
+            background-color: #0057B8;
+            border-color: #0057B8;
+        }
+        .btn-primary:hover { background-color: #003e82; border-color: #003e82; }
+        .btn-success { background-color: #4BB543; border-color: #4BB543; }
+        .btn-danger { background-color: #D70040; border-color: #D70040; }
+        .btn-warning { background-color: #ffc107; border-color: #ffc107; color: #000; }
+        .btn-info { background-color: #17a2b8; border-color: #17a2b8; }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #0057B8;
+            box-shadow: 0 0 0 2px #0057B820;
+        }
+        
+        .metric-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .metric-label { font-weight: 600; color: #495057; }
+        .metric-value { font-weight: 700; color: #0057B8; }
+        
+        .workflow-status {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .workflow-active { background: #d4edda; border: 1px solid #c3e6cb; }
+        .workflow-inactive { background: #f8f9fa; border: 1px solid #dee2e6; }
+        
+        .control-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #fff;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+        .control-section h6 {
+            margin-bottom: 15px;
+            color: #0057B8;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 1150px) {
+            .validation-row {
+                flex-direction: column;
+                max-width: 98vw;
+            }
+            .validation-card,
+            .validation-card.single,
+            .validation-card.double {
+                max-width: 98vw !important;
+                min-width: 0 !important;
+            }
+            .trending-chart {
+                max-width: 96vw !important;
+            }
+        }
+        @media (max-width: 991px) {
+            .validation-group-card, .validation-card { padding: 10px; }
+        }
+        @media (max-width: 850px) {
+            .validation-card,
+            .validation-card.single,
+            .validation-card.double {
+                max-width: 100vw !important;
+                min-width: 0 !important;
+            }
+            .trending-chart { width: 96vw !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="header py-3">
+        <h1 class="dashboard-title">Digital Twin Validation & Calibration Dashboard</h1>
+    </div>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Enhanced Control Panel (Left) -->
+            <div class="col-lg-3 col-md-4">
+                <!-- System Configuration -->
+                <div class="card">
+                    <div class="card-header"><h6>🎛️ System Configuration</h6></div>
+                    <div class="card-body">
+                        <label>Operational Mode</label>
+                        <select class="form-select mb-2" id="operationalMode">
+                            <option value="offline">Offline</option>
+                            <option value="online">Online</option>
+                        </select>
+                        
+                        <label>Validation Level</label>
+                        <select class="form-select mb-2" id="validationLevel" onchange="updateValidationConfiguration()">
+                            <option value="kpi">KPI Level</option>
+                            <option value="event">Event Level</option>
+                        </select>
+                        
+                        <div id="kpiConfigSection">
+                            <label>KPI Metric to Validate</label>
+                            <select class="form-select mb-2" id="kpiMetric" onchange="updateValidationConfiguration()">
+                                <option value="interdeparture_time">Interdeparture Time</option>
+                                <option value="system_time">System Time</option>
+                            </select>
+                            
+                            <label>Validation Algorithm</label>
+                            <select class="form-select mb-2" id="kpiAlgorithm" onchange="updateValidationConfiguration()">
+                                <option value="mlcss">mLCSS</option>
+                                <option value="dtw">DTW</option>
+                            </select>
+                        </div>
+                        
+                        <div class="kpi-metric-info" id="metricInfoBox">
+                            <strong>Current Selection:</strong>
+                            <div id="metricDescription">Validating Interdeparture Time with mLCSS</div>
+                            <small id="metricExplanation">Measures time intervals between consecutive part completions at Station 5</small>
+                        </div>
+                        
+                        <label class="mt-3">Window Size</label>
+                        <input type="number" class="form-control mb-2" value="50" id="windowSize" min="10" max="1000">
+                        
+                        <label>Update Interval (seconds)</label>
+                        <input type="number" class="form-control mb-2" value="5" id="updateInterval" min="1" max="300">
+                        
+                        <button class="btn btn-primary btn-sm mt-2" onclick="applyConfiguration()">Apply Configuration</button>
+                    </div>
+                </div>
+                
+                <!-- Data Preparation Control -->
+                <div class="card">
+                    <div class="card-header"><h6>📊 Data Preparation</h6></div>
+                    <div class="card-body">
+                        <div id="dataPreparationStatus" class="workflow-status workflow-inactive">
+                            <strong>Status:</strong> <span id="dataPreparationState">Inactive</span>
+                            <div id="dataPreparationDetails" style="font-size: 0.9em; margin-top: 5px;"></div>
+                        </div>
+                        
+                        <button class="btn btn-success btn-sm" onclick="startDataPreparation()" id="startButton">Start</button>
+                        <button class="btn btn-danger btn-sm" onclick="stopAllOperations()" id="stopButton">Stop</button>
+                        
+                        <div class="mt-3">
+                            <div class="metric-display">
+                                <span class="metric-label">Files Processed:</span>
+                                <span class="metric-value" id="filesProcessed">0</span>
+                            </div>
+                            <div class="metric-display">
+                                <span class="metric-label">Status:</span>
+                                <span class="metric-value" id="dataPreparationStatusText">Ready</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Validation Campaign Control -->
+                <div class="card">
+                    <div class="card-header"><h6>🔍 Validation Campaign</h6></div>
+                    <div class="card-body">
+                        <div id="validationCampaignStatus" class="workflow-status workflow-inactive">
+                            <strong>Status:</strong> <span id="validationCampaignState">Inactive</span>
+                            <div id="validationCampaignDetails" style="font-size: 0.9em; margin-top: 5px;"></div>
+                        </div>
+                        
+                        <button class="btn btn-info btn-sm" onclick="startValidationCampaign()" id="startValidationButton">Start Validation</button>
+                        <button class="btn btn-warning btn-sm" onclick="stopValidationCampaign()" id="stopValidationButton">Stop Validation</button>
+                        
+                        <div class="mt-3">
+                            <div class="metric-display">
+                                <span class="metric-label">Windows Processed:</span>
+                                <span class="metric-value" id="validationWindowsProcessed">0</span>
+                            </div>
+                            <div class="metric-display">
+                                <span class="metric-label">Validation Failures:</span>
+                                <span class="metric-value" id="validationFailures">0</span>
+                            </div>
+                            <div class="metric-display">
+                                <span class="metric-label">Calibrations Done:</span>
+                                <span class="metric-value" id="calibrationsDone">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Arena Control -->
+                <div class="card">
+                    <div class="card-header"><h6>🎮 Arena Control</h6></div>
+                    <div class="card-body">
+                        <div class="status-box" id="arenaConnectionStatus">
+                            <strong>Arena:</strong> <span id="arenaStatus">Disconnected</span>
+                        </div>
+                        
+                        <button class="btn btn-primary btn-sm" onclick="connectArena()" id="connectArenaButton">Connect Arena</button>
+                        <button class="btn btn-primary btn-sm" onclick="loadModel()" id="loadModelButton" disabled>Load Model</button>
+                        <button class="btn btn-success btn-sm" onclick="startSimulation()" id="startSimulationButton" disabled>Start Simulation</button>
+                        <button class="btn btn-warning btn-sm" onclick="stopSimulation()" id="stopSimulationButton" disabled>Stop Simulation</button>
+                        
+                        <div class="mt-3">
+                            <div class="metric-display">
+                                <span class="metric-label">Simulation Time:</span>
+                                <span class="metric-value" id="simulationTime">0.0</span>
+                            </div>
+                            <div class="metric-display">
+                                <span class="metric-label">Model Status:</span>
+                                <span class="metric-value" id="modelStatus">Not Loaded</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Validation Trending and System Status (Center/Right) -->
+            <div class="col-lg-9 col-md-8">
+                <!-- Validation Results -->
+                <div class="validation-group-card">
+                    <div class="validation-title">Real-time Validation Results</div>
+                    <div class="validation-row" id="validationRow">
+                        <div class="validation-card" id="mlcssCard">
+                            <span class="validation-value mlcss-color" id="mlcssValue">0.0%</span>
+                            <div class="validation-label">mLCSS (KPI)</div>
+                            <div class="validation-sublabel" id="mlcssMetricLabel">No metric selected</div>
+                            <canvas class="trending-chart" id="mlcssChart"></canvas>
+                        </div>
+                        <div class="validation-card" id="dtwCard">
+                            <span class="validation-value dtw-color" id="dtwValue">0.0%</span>
+                            <div class="validation-label">DTW (KPI)</div>
+                            <div class="validation-sublabel" id="dtwMetricLabel">No metric selected</div>
+                            <canvas class="trending-chart" id="dtwChart"></canvas>
+                        </div>
+                        <div class="validation-card" id="lcssCard">
+                            <span class="validation-value lcss-color" id="lcssValue">0.0%</span>
+                            <div class="validation-label">LCSS (Event)</div>
+                            <div class="validation-sublabel">Event sequence matching</div>
+                            <canvas class="trending-chart" id="lcssChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Real and Virtual Twins side by side -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>🏭 Real Manufacturing System</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex flex-row flex-wrap">
+                                    <div class="flex-fill station-card" id="realS1Card">S1<br><small>IDLE</small></div>
+                                    <div class="flex-fill station-card" id="realS2Card">S2<br><small>IDLE</small></div>
+                                    <div class="flex-fill station-card" id="realS3Card">S3<br><small>IDLE</small></div>
+                                    <div class="flex-fill station-card" id="realS4Card">S4<br><small>IDLE</small></div>
+                                    <div class="flex-fill station-card" id="realS5Card">S5<br><small>IDLE</small></div>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="metric-display">
+                                        <span class="metric-label">Data Source:</span>
+                                        <span class="metric-value" id="realDataSource">File Monitor</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>🎯 Digital Twin (Arena)</h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex flex-row flex-wrap">
+                                    <div class="flex-fill station-card" id="arenaS1Card">M1<br><small>IDLE</small></div>
+                                    <div class="flex-fill station-card" id="arenaS2Card">M2<br><small>IDLE</small></div>
+                                    <div class="flex-fill station-card" id="arenaS3Card">M3<br><small>IDLE</small></div>
+                                    <div class="flex-fill station-card" id="arenaS4Card">M4<br><small>IDLE</small></div>
+                                    <div class="flex-fill station-card" id="arenaS5Card">M5<br><small>IDLE</small></div>
+                                </div>
+                                <div class="mt-3">
+                                    <div class="metric-display">
+                                        <span class="metric-label">Arena Integration:</span>
+                                        <span class="metric-value" id="arenaIntegrationStatus">Disabled</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- System Metrics -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header"><h6>📊 System Metrics</h6></div>
+                            <div class="card-body">
+                                <div class="metric-display">
+                                    <span class="metric-label">Current KPI Metric:</span>
+                                    <span class="metric-value" id="currentKpiMetric">Interdeparture Time</span>
+                                </div>
+                                <div class="metric-display">
+                                    <span class="metric-label">Validation Algorithm:</span>
+                                    <span class="metric-value" id="currentAlgorithm">mLCSS</span>
+                                </div>
+                                <div class="metric-display">
+                                    <span class="metric-label">Validation Count:</span>
+                                    <span class="metric-value" id="validationCount">0</span>
+                                </div>
+                                <div class="metric-display">
+                                    <span class="metric-label">Last Update:</span>
+                                    <span class="metric-value" id="lastUpdateTime">Never</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header"><h6>⚡ Performance Metrics</h6></div>
+                            <div class="card-body">
+                                <div class="metric-display">
+                                    <span class="metric-label">Data Preparation:</span>
+                                    <span class="metric-value" id="dataPreparationMetric">Inactive</span>
+                                </div>
+                                <div class="metric-display">
+                                    <span class="metric-label">Validation Campaign:</span>
+                                    <span class="metric-value" id="validationCampaignMetric">Inactive</span>
+                                </div>
+                                <div class="metric-display">
+                                    <span class="metric-label">Error Count:</span>
+                                    <span class="metric-value" id="errorCount">0</span>
+                                </div>
+                                <div class="metric-display">
+                                    <span class="metric-label">System Uptime:</span>
+                                    <span class="metric-value" id="systemUptime">00:00:00</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- System Activity Log -->
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-header">
+                                <h6>📋 System Activity Log</h6>
+                                <button class="btn btn-sm btn-outline-secondary float-end" onclick="clearLog()">Clear Log</button>
+                            </div>
+                            <div class="card-body">
+                                <div class="activity-log" id="activityLog">
+                                    <div class="log-entry">Dashboard initialized at <span id="initTime"></span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let validationTrends = {
+        lcss: [0, 0, 0, 0, 0, 0, 0, 0],
+        mlcss: [0, 0, 0, 0, 0, 0, 0, 0],
+        dtw:  [0, 0, 0, 0, 0, 0, 0, 0]
+    };
+    let charts = {};
+    let lastValidationResults = {};
+    let systemStartTime = new Date();
+    let dashboardReady = false;
+    let currentConfiguration = {
+        validationLevel: 'kpi',
+        kpiMetric: 'interdeparture_time',
+        kpiAlgorithm: 'mlcss'
+    };
+
+    function initializeTrendingCharts() {
+        function makeChart(canvasId, color) {
+            return new Chart(document.getElementById(canvasId), {
+                type: 'line',
+                data: {
+                    labels: Array(validationTrends[canvasId.replace('Chart','')].length).fill(''),
+                    datasets: [{
+                        data: [...validationTrends[canvasId.replace('Chart','')]].reverse(),
+                        borderColor: "#0057B8",
+                        borderWidth: 7,
+                        backgroundColor: 'rgba(0,87,184,0.10)',
+                        fill: false,
+                        tension: 0,
+                        pointRadius: 0,
+                        pointBackgroundColor: "#0057B8"
+                    }]
+                },
+                options: {
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    layout: { padding: { left: 0, right: 0, top: 5, bottom: 5 } },
+                    scales: {
+                        x: {display:false},
+                        y: {display:false, min:0, max:1}
+                    }
+                }
+            });
+        }
+        charts.lcss = makeChart('lcssChart', '#0057B8');
+        charts.mlcss = makeChart('mlcssChart', '#0057B8');
+        charts.dtw  = makeChart('dtwChart',  '#0057B8');
+    }
+
+    function updateValidationConfiguration() {
+        const validationLevel = document.getElementById('validationLevel').value;
+        const kpiConfigSection = document.getElementById('kpiConfigSection');
+        
+        if (validationLevel === 'event') {
+            kpiConfigSection.style.display = 'none';
+            currentConfiguration.validationLevel = 'event';
+            updateMetricInfo();
+            updateValidationCardsVisibility();
+        } else {
+            kpiConfigSection.style.display = 'block';
+            currentConfiguration.validationLevel = 'kpi';
+            currentConfiguration.kpiMetric = document.getElementById('kpiMetric').value;
+            currentConfiguration.kpiAlgorithm = document.getElementById('kpiAlgorithm').value;
+            updateMetricInfo();
+            updateValidationCardsVisibility();
+        }
+    }
+
+    function updateMetricInfo() {
+        const metricInfoBox = document.getElementById('metricInfoBox');
+        const metricDescription = document.getElementById('metricDescription');
+        const metricExplanation = document.getElementById('metricExplanation');
+        
+        if (currentConfiguration.validationLevel === 'event') {
+            metricDescription.textContent = 'Validating Event Sequences with LCSS';
+            metricExplanation.textContent = 'Comparing the order and timing of manufacturing events';
+            metricInfoBox.style.background = '#fff3cd';
+        } else {
+            const metric = currentConfiguration.kpiMetric;
+            const algorithm = currentConfiguration.kpiAlgorithm.toUpperCase();
+            const metricName = metric === 'interdeparture_time' ? 'Interdeparture Time' : 'System Time';
+            
+            metricDescription.textContent = `Validating ${metricName} with ${algorithm}`;
+            
+            if (metric === 'interdeparture_time') {
+                metricExplanation.textContent = 'Measures time intervals between consecutive part completions at Station 5';
+            } else {
+                metricExplanation.textContent = 'Measures complete circulation time for parts in the closed-loop system';
+            }
+            
+            metricInfoBox.style.background = '#e7f3ff';
+        }
+        
+        // Update metric labels on validation cards
+        updateValidationCardLabels();
+    }
+
+    function updateValidationCardLabels() {
+        const mlcssMetricLabel = document.getElementById('mlcssMetricLabel');
+        const dtwMetricLabel = document.getElementById('dtwMetricLabel');
+        
+        if (currentConfiguration.validationLevel === 'kpi') {
+            const metricName = currentConfiguration.kpiMetric === 'interdeparture_time' 
+                ? 'Interdeparture Time' 
+                : 'System Time';
+            mlcssMetricLabel.textContent = metricName;
+            dtwMetricLabel.textContent = metricName;
+        } else {
+            mlcssMetricLabel.textContent = 'Not applicable';
+            dtwMetricLabel.textContent = 'Not applicable';
+        }
+    }
+
+    function updateValidationCardsVisibility() {
+        const mlcssCard = document.getElementById('mlcssCard');
+        const dtwCard = document.getElementById('dtwCard');
+        const lcssCard = document.getElementById('lcssCard');
+        
+        // Hide all cards first
+        mlcssCard.style.display = 'none';
+        dtwCard.style.display = 'none';
+        lcssCard.style.display = 'none';
+        
+        // Show relevant cards based on selection
+        if (currentConfiguration.validationLevel === 'kpi') {
+            if (currentConfiguration.kpiAlgorithm === 'mlcss') {
+                mlcssCard.style.display = 'flex';
+            } else if (currentConfiguration.kpiAlgorithm === 'dtw') {
+                dtwCard.style.display = 'flex';
+            }
+        } else if (currentConfiguration.validationLevel === 'event') {
+            lcssCard.style.display = 'flex';
+        }
+        
+        // Adjust card sizing
+        const allCards = [mlcssCard, dtwCard, lcssCard];
+        const visibleCards = allCards.filter(card => card.style.display === 'flex');
+        
+        allCards.forEach(card => {
+            card.classList.remove('single', 'double');
+        });
+        
+        if (visibleCards.length === 1) {
+            visibleCards[0].classList.add('single');
+        } else if (visibleCards.length === 2) {
+            visibleCards.forEach(card => card.classList.add('double'));
+        }
+    }
+
+    function updateTrendingCharts(lcss, mlcss, dtw) {
+        validationTrends.lcss.push(lcss/100);   validationTrends.lcss.shift();
+        validationTrends.mlcss.push(mlcss/100); validationTrends.mlcss.shift();
+        validationTrends.dtw.push(dtw/100);     validationTrends.dtw.shift();
+        charts.lcss.data.datasets[0].data = [...validationTrends.lcss].reverse();
+        charts.mlcss.data.datasets[0].data = [...validationTrends.mlcss].reverse();
+        charts.dtw.data.datasets[0].data = [...validationTrends.dtw].reverse();
+        charts.lcss.update('none');
+        charts.mlcss.update('none');
+        charts.dtw.update('none');
+    }
+
+    function updateDashboard() {
+        if (!dashboardReady) return;
+        
+        fetch('/api/system/status').then(res => res.json()).then(data => {
+            // Update workflow states
+            updateDataPreparationStatus(data);
+            updateValidationCampaignStatus(data);
+            updateArenaStatus(data);
+            
+            // Update current configuration display
+            if (data.kpi_metric) {
+                document.getElementById('currentKpiMetric').textContent = 
+                    data.kpi_metric === 'interdeparture_time' ? 'Interdeparture Time' : 'System Time';
+            }
+            if (data.kpi_algorithm) {
+                document.getElementById('currentAlgorithm').textContent = data.kpi_algorithm.toUpperCase();
+            }
+            
+            // Update general metrics
+            document.getElementById('validationCount').textContent = data.validation_count || 0;
+            document.getElementById('lastUpdateTime').textContent = new Date().toLocaleTimeString();
+            document.getElementById('errorCount').textContent = data.system_status ? data.system_status.consecutive_errors || 0 : 0;
+            
+            // Update system uptime
+            const uptime = new Date() - systemStartTime;
+            const hours = Math.floor(uptime / 3600000);
+            const minutes = Math.floor((uptime % 3600000) / 60000);
+            const seconds = Math.floor((uptime % 60000) / 1000);
+            document.getElementById('systemUptime').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // Update station states for real system
+            updateRealSystemStates(data);
+            
+        }).catch(error => {
+            addLogEntry('Error fetching system status: ' + error.message, 'error');
+        });
+
+        // Update validation results
+        fetch('/api/validation/results')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.data) {
+                const validationCampaignActive = document.getElementById('validationCampaignState').textContent === 'Active';
+                if (validationCampaignActive) {
+                    updateValidationResults(data.data);
+                }
+            }
+        }).catch(error => {
+            // Silently handle validation results errors when validation not active
+        });
+
+        // Update Arena station states
+        updateArenaStationStates();
+    }
+
+    function updateDataPreparationStatus(data) {
+        const active = data.data_preparation_active || false;
+        const stats = data.data_preparation_statistics || {};
+        
+        const statusElement = document.getElementById('dataPreparationStatus');
+        const stateElement = document.getElementById('dataPreparationState');
+        const detailsElement = document.getElementById('dataPreparationDetails');
+        
+        stateElement.textContent = active ? 'Active' : 'Inactive';
+        statusElement.className = 'workflow-status ' + (active ? 'workflow-active' : 'workflow-inactive');
+        
+        if (active && stats.start_time) {
+            const startTime = new Date(stats.start_time).toLocaleTimeString();
+            detailsElement.textContent = `Started: ${startTime}`;
+        } else {
+            detailsElement.textContent = '';
+        }
+        
+        document.getElementById('filesProcessed').textContent = stats.files_processed || 0;
+        document.getElementById('dataPreparationStatusText').textContent = stats.status || 'Ready';
+        document.getElementById('dataPreparationMetric').textContent = active ? 'Active' : 'Inactive';
+        
+        updateButtonStates();
+    }
+
+    function updateValidationCampaignStatus(data) {
+        const active = data.validation_campaign_active || false;
+        const stats = data.validation_statistics || {};
+        
+        const statusElement = document.getElementById('validationCampaignStatus');
+        const stateElement = document.getElementById('validationCampaignState');
+        const detailsElement = document.getElementById('validationCampaignDetails');
+        
+        stateElement.textContent = active ? 'Active' : 'Inactive';
+        statusElement.className = 'workflow-status ' + (active ? 'workflow-active' : 'workflow-inactive');
+        
+        if (active && stats.start_time) {
+            const startTime = new Date(stats.start_time).toLocaleTimeString();
+            detailsElement.textContent = `Started: ${startTime}`;
+        } else {
+            detailsElement.textContent = '';
+        }
+        
+        document.getElementById('validationWindowsProcessed').textContent = stats.windows_processed || 0;
+        document.getElementById('validationFailures').textContent = stats.validation_failures || 0;
+        document.getElementById('calibrationsDone').textContent = stats.calibrations_performed || 0;
+        document.getElementById('validationCampaignMetric').textContent = active ? 'Active' : 'Inactive';
+    }
+
+    function updateArenaStatus(data) {
+        const arenaIntegration = data.arena_integration_enabled || false;
+        const arenaStatus = data.arena_real_time || data.digital_model || {};
+        
+        const connectionElement = document.getElementById('arenaConnectionStatus');
+        const statusElement = document.getElementById('arenaStatus');
+        
+        // Get connection status - check multiple possible locations in the data
+        const connected = arenaStatus.connected || 
+                         (data.digital_model && data.digital_model.connected) || 
+                         false;
+        
+        const modelLoaded = arenaStatus.model_loaded || 
+                           (data.digital_model && data.digital_model.model_loaded) || 
+                           false;
+        
+        const simState = arenaStatus.simulation_state || 
+                        (data.digital_model && data.digital_model.simulation_state) || 
+                        'Unknown';
+        
+        // Update status display
+        if (connected) {
+            statusElement.textContent = 'Connected';
+            connectionElement.className = 'status-box status-connected';
+        } else {
+            statusElement.textContent = 'Disconnected';
+            connectionElement.className = 'status-box status-disconnected';
+        }
+        
+        document.getElementById('arenaIntegrationStatus').textContent = arenaIntegration ? 'Enabled' : 'Disabled';
+        document.getElementById('modelStatus').textContent = modelLoaded ? 'Loaded' : 'Not Loaded';
+        
+        // Update simulation time if available
+        const simTime = arenaStatus.simulation_time || 
+                       (arenaStatus.connection && arenaStatus.connection.simulation_time) ||
+                       (data.digital_model && data.digital_model.simulation_time) ||
+                       0;
+        document.getElementById('simulationTime').textContent = simTime.toFixed(1);
+        
+        // Update button states with proper values
+        updateArenaButtonStates(connected, modelLoaded, simState);
+        
+        // Log status for debugging
+        console.log('Arena Status Update:', {
+            connected: connected,
+            modelLoaded: modelLoaded,
+            simState: simState,
+            integration: arenaIntegration
+        });
+    }
+
+    function updateButtonStates() {
+        const dataPreparationActive = document.getElementById('dataPreparationState').textContent === 'Active';
+        const validationCampaignActive = document.getElementById('validationCampaignState').textContent === 'Active';
+        
+        document.getElementById('startButton').disabled = dataPreparationActive;
+        document.getElementById('stopButton').disabled = !dataPreparationActive && !validationCampaignActive;
+        document.getElementById('startValidationButton').disabled = validationCampaignActive;
+        document.getElementById('stopValidationButton').disabled = !validationCampaignActive;
+    }
+
+    function updateArenaButtonStates(connected, modelLoaded, simState) {
+        const isRunning = simState === 'Running' || simState === 'running';
+        
+        const connectBtn = document.getElementById('connectArenaButton');
+        const loadBtn = document.getElementById('loadModelButton');
+        const startBtn = document.getElementById('startSimulationButton');
+        const stopBtn = document.getElementById('stopSimulationButton');
+        
+        // Enable/disable buttons based on state
+        // Connect button is enabled when not connected
+        connectBtn.disabled = connected;
+        
+        // Load button is enabled when connected but model not loaded
+        loadBtn.disabled = !connected || modelLoaded;
+        
+        // Start button is enabled when connected, model loaded, and not running
+        startBtn.disabled = !connected || !modelLoaded || isRunning;
+        
+        // Stop button is enabled when connected, model loaded, and running
+        stopBtn.disabled = !connected || !modelLoaded || !isRunning;
+        
+        // Log button states for debugging
+        console.log('Button States:', {
+            connectDisabled: connectBtn.disabled,
+            loadDisabled: loadBtn.disabled,
+            startDisabled: startBtn.disabled,
+            stopDisabled: stopBtn.disabled
+        });
+    }
+
+    function updateRealSystemStates(data) {
+        const opMode = data.operational_mode || 'offline';
+        const realStates = data.station_states && data.station_states.real;
+        
+        document.getElementById('realDataSource').textContent = opMode === 'online' ? 'Real-time' : 'File Monitor';
+        
+        for(let i=1; i<=5; i++) {
+            const stationId = 'S'+i;
+            const cardElement = document.getElementById('realS'+i+'Card');
+            if(cardElement) {
+                let status = 'Unavailable';
+                let cssClass = 'station-card';
+                
+                if(opMode === 'online' && realStates && realStates[stationId] && realStates[stationId].status) {
+                    status = realStates[stationId].status;
+                    cssClass += ' ' + status.toLowerCase();
+                } else {
+                    cssClass += ' idle';
+                }
+                
+                cardElement.className = cssClass;
+                cardElement.innerHTML = stationId + "<br><small>" + status + "</small>";
+            }
+        }
+    }
+
+    function updateArenaStationStates() {
+        if (!dashboardReady) return;
+        
+        fetch('/api/arena/status')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.data && data.data.machines) {
+                const machines = data.data.machines;
+                for(let i=1; i<=5; i++) {
+                    const machineKey = Object.keys(machines).find(key => key.includes(i.toString()));
+                    const cardElement = document.getElementById('arenaS'+i+'Card');
+                    if(cardElement && machineKey && machines[machineKey]) {
+                        const status = machines[machineKey].status || 'Unknown';
+                        const cssClass = 'station-card ' + status.toLowerCase();
+                        cardElement.className = cssClass;
+                        cardElement.innerHTML = "M"+i + "<br><small>" + status + "</small>";
+                    }
+                }
+            } else {
+                for(let i=1; i<=5; i++) {
+                    const cardElement = document.getElementById('arenaS'+i+'Card');
+                    if(cardElement) {
+                        cardElement.className = 'station-card';
+                        cardElement.innerHTML = "M"+i + "<br><small>Disconnected</small>";
+                    }
+                }
+            }
+        })
+        .catch(error => {
+            // Silently handle Arena status errors
+        });
+    }
+
+    function updateValidationResults(results) {
+        const validationCampaignActive = document.getElementById('validationCampaignState').textContent === 'Active';
+        
+        let mlcss = parseFloat(results.mlcss || 0) * 100;
+        let dtw = parseFloat(results.dtw || 0) * 100;
+        let lcss = parseFloat(results.lcss || 0) * 100;
+        
+        document.getElementById('mlcssValue').textContent = mlcss.toFixed(1) + '%';
+        document.getElementById('dtwValue').textContent = dtw.toFixed(1) + '%';
+        document.getElementById('lcssValue').textContent = lcss.toFixed(1) + '%';
+        
+        updateTrendingCharts(lcss, mlcss, dtw);
+        
+        if (validationCampaignActive) {
+            let validationMsg = "Validation: ";
+            
+            if (currentConfiguration.validationLevel === 'event') {
+                validationMsg += `LCSS=${lcss.toFixed(1)}%`;
+                if (lcss < 85) {
+                    validationMsg += " ⚠️ VALIDATION FAILED";
+                    addLogEntry(validationMsg, 'warning');
+                } else {
+                    addLogEntry(validationMsg, 'success');
+                }
+            } else {
+                const metric = currentConfiguration.kpiMetric === 'interdeparture_time' 
+                    ? 'IDT' : 'SysTime';
+                if (currentConfiguration.kpiAlgorithm === 'mlcss') {
+                    validationMsg += `mLCSS(${metric})=${mlcss.toFixed(1)}%`;
+                    if (mlcss < 90) {
+                        validationMsg += " ⚠️ VALIDATION FAILED";
+                        addLogEntry(validationMsg, 'warning');
+                    } else {
+                        addLogEntry(validationMsg, 'success');
+                    }
+                } else if (currentConfiguration.kpiAlgorithm === 'dtw') {
+                    validationMsg += `DTW(${metric})=${dtw.toFixed(1)}%`;
+                    if (dtw < 95) {
+                        validationMsg += " ⚠️ VALIDATION FAILED";
+                        addLogEntry(validationMsg, 'warning');
+                    } else {
+                        addLogEntry(validationMsg, 'success');
+                    }
+                }
+            }
+        }
+        
+        lastValidationResults = results;
+    }
+
+    function addLogEntry(message, type = 'info') {
+        if (!dashboardReady) return;
+        
+        const logContainer = document.getElementById('activityLog');
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.className = 'log-entry';
+        
+        let icon = '📍';
+        let color = '#495057';
+        
+        switch(type) {
+            case 'success': icon = '✅'; color = '#28a745'; break;
+            case 'warning': icon = '⚠️'; color = '#ffc107'; break;
+            case 'error': icon = '❌'; color = '#dc3545'; break;
+            case 'info': icon = 'ℹ️'; color = '#17a2b8'; break;
+        }
+        
+        logEntry.innerHTML = `<div style="font-weight: bold; color: ${color};">${icon} ${message}</div>
+                              <div style="font-size: 0.8rem; color: #6c757d;">${timestamp}</div>`;
+        logContainer.insertBefore(logEntry, logContainer.firstChild);
+        
+        while (logContainer.children.length > 15) {
+            logContainer.removeChild(logContainer.lastChild);
+        }
+    }
+
+    function applyConfiguration() {
+        const config = {
+            validation_level: document.getElementById('validationLevel').value,
+            kpi_algorithm: document.getElementById('kpiAlgorithm').value,
+            kpi_metric: document.getElementById('kpiMetric').value,
+            operational_mode: document.getElementById('operationalMode').value,
+            window_size: parseInt(document.getElementById('windowSize').value),
+            update_interval: parseInt(document.getElementById('updateInterval').value)
+        };
+        
+        // Update current configuration
+        currentConfiguration.validationLevel = config.validation_level;
+        currentConfiguration.kpiMetric = config.kpi_metric;
+        currentConfiguration.kpiAlgorithm = config.kpi_algorithm;
+        
+        fetch('/api/config/update', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify(config)
+        })
+        .then(r=>r.json())
+        .then(data=>{
+            if (data.success) {
+                const metricName = config.kpi_metric === 'interdeparture_time' 
+                    ? 'Interdeparture Time' : 'System Time';
+                addLogEntry(`Configuration updated: ${metricName} with ${config.kpi_algorithm.toUpperCase()}`, 'success');
+                updateMetricInfo();
+                updateValidationCardsVisibility();
+            } else {
+                addLogEntry('Configuration update failed: ' + (data.error || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            addLogEntry('Configuration update error: ' + error.message, 'error');
+        });
+    }
+
+    function startDataPreparation() {
+        addLogEntry('Starting data preparation workflow...', 'info');
+        fetch('/api/data-preparation/start', {
+            method:'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({})
+        })
+        .then(r=>r.json())
+        .then(data=>{
+            if (data.success) {
+                addLogEntry('Data preparation started successfully', 'success');
+            } else {
+                addLogEntry('Data preparation start failed: ' + (data.error || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            addLogEntry('Data preparation start error: ' + error.message, 'error');
+        });
+    }
+
+    function stopAllOperations() {
+        addLogEntry('Stopping all operations...', 'info');
+        fetch('/api/system/stop-all', {
+            method:'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({})
+        })
+        .then(r=>r.json())
+        .then(data=>{
+            if (data.success) {
+                addLogEntry('All operations stopped successfully', 'success');
+            } else {
+                addLogEntry('Stop operations failed: ' + (data.error || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            addLogEntry('Stop operations error: ' + error.message, 'error');
+        });
+    }
+
+    function startValidationCampaign() {
+        const metric = currentConfiguration.kpiMetric === 'interdeparture_time' 
+            ? 'Interdeparture Time' : 'System Time';
+        const algorithm = currentConfiguration.kpiAlgorithm.toUpperCase();
+        addLogEntry(`Starting validation campaign (${metric} with ${algorithm})...`, 'info');
+        
+        fetch('/api/validation/start', {
+            method:'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({})
+        })
+        .then(r=>r.json())
+        .then(data=>{
+            if (data.success) {
+                addLogEntry('Validation campaign started successfully', 'success');
+            } else {
+                addLogEntry('Validation campaign start failed: ' + (data.error || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            addLogEntry('Validation campaign start error: ' + error.message, 'error');
+        });
+    }
+
+    function stopValidationCampaign() {
+        addLogEntry('Stopping validation campaign...', 'info');
+        fetch('/api/validation/stop', {
+            method:'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({})
+        })
+        .then(r=>r.json())
+        .then(data=>{
+            if (data.success) {
+                addLogEntry('Validation campaign stopped', 'info');
+            } else {
+                addLogEntry('Validation campaign stop failed: ' + (data.error || 'Unknown error'), 'error');
+            }
+        })
+        .catch(error => {
+            addLogEntry('Validation campaign stop error: ' + error.message, 'error');
+        });
+    }
+
+    function connectArena() {
+        addLogEntry('Connecting to Arena...', 'info');
+        
+        // Temporarily enable the button to show it's processing
+        const connectBtn = document.getElementById('connectArenaButton');
+        const originalText = connectBtn.textContent;
+        connectBtn.textContent = 'Connecting...';
+        connectBtn.disabled = true;
+        
+        fetch('/api/arena/connect', {
+            method:'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                addLogEntry('Arena connected successfully', 'success');
+                // Force a status update
+                setTimeout(updateDashboard, 500);
+            } else {
+                addLogEntry('Arena connection failed: ' + (data.error || 'Unknown error'), 'error');
+                if (data.action_required) {
+                    addLogEntry('Action required: ' + data.action_required, 'warning');
+                }
+                // Re-enable connect button on failure
+                connectBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            addLogEntry('Arena connection error: ' + error.message, 'error');
+            // Re-enable connect button on error
+            connectBtn.disabled = false;
+        })
+        .finally(() => {
+            connectBtn.textContent = originalText;
+        });
+    }
+
+    function loadModel() {
+        addLogEntry('Loading Arena model...', 'info');
+        
+        const loadBtn = document.getElementById('loadModelButton');
+        const originalText = loadBtn.textContent;
+        loadBtn.textContent = 'Loading...';
+        loadBtn.disabled = true;
+        
+        fetch('/api/arena/load', {
+            method:'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                addLogEntry('Arena model loaded successfully', 'success');
+                if (data.details && data.details.resources_found) {
+                    addLogEntry(`Found ${data.details.resources_found} resources in model`, 'info');
+                }
+                // Force a status update
+                setTimeout(updateDashboard, 500);
+            } else {
+                addLogEntry('Model load failed: ' + (data.error || 'Unknown error'), 'error');
+                if (data.action_required) {
+                    addLogEntry('Action required: ' + data.action_required, 'warning');
+                }
+                // Re-enable load button on failure
+                setTimeout(() => {
+                    updateDashboard();
+                }, 1000);
+            }
+        })
+        .catch(error => {
+            addLogEntry('Model load error: ' + error.message, 'error');
+            setTimeout(() => {
+                updateDashboard();
+            }, 1000);
+        })
+        .finally(() => {
+            loadBtn.textContent = originalText;
+        });
+    }
+
+    function startSimulation() {
+        addLogEntry('Starting Arena simulation...', 'info');
+        
+        const startBtn = document.getElementById('startSimulationButton');
+        const originalText = startBtn.textContent;
+        startBtn.textContent = 'Starting...';
+        startBtn.disabled = true;
+        
+        fetch('/api/arena/start', {
+            method:'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                addLogEntry('Arena simulation started', 'success');
+                // Force a status update
+                setTimeout(updateDashboard, 500);
+            } else {
+                addLogEntry('Simulation start failed: ' + (data.error || 'Unknown error'), 'error');
+                if (data.action_required) {
+                    addLogEntry('Action required: ' + data.action_required, 'warning');
+                }
+                setTimeout(() => {
+                    updateDashboard();
+                }, 1000);
+            }
+        })
+        .catch(error => {
+            addLogEntry('Simulation start error: ' + error.message, 'error');
+            setTimeout(() => {
+                updateDashboard();
+            }, 1000);
+        })
+        .finally(() => {
+            startBtn.textContent = originalText;
+        });
+    }
+
+    function stopSimulation() {
+        addLogEntry('Stopping Arena simulation...', 'info');
+        
+        const stopBtn = document.getElementById('stopSimulationButton');
+        const originalText = stopBtn.textContent;
+        stopBtn.textContent = 'Stopping...';
+        stopBtn.disabled = true;
+        
+        fetch('/api/arena/stop', {
+            method:'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({})
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                addLogEntry('Arena simulation stopped', 'info');
+                // Force a status update
+                setTimeout(updateDashboard, 500);
+            } else {
+                addLogEntry('Simulation stop failed: ' + (data.error || 'Unknown error'), 'error');
+                if (data.action_required) {
+                    addLogEntry('Action required: ' + data.action_required, 'warning');
+                }
+                setTimeout(() => {
+                    updateDashboard();
+                }, 1000);
+            }
+        })
+        .catch(error => {
+            addLogEntry('Simulation stop error: ' + error.message, 'error');
+            setTimeout(() => {
+                updateDashboard();
+            }, 1000);
+        })
+        .finally(() => {
+            stopBtn.textContent = originalText;
+        });
+    }
+
+    function clearLog() {
+        const logContainer = document.getElementById('activityLog');
+        logContainer.innerHTML = '<div class="log-entry">Activity log cleared at ' + new Date().toLocaleTimeString() + '</div>';
+    }
+
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+        initializeTrendingCharts();
+        document.getElementById('initTime').textContent = new Date().toLocaleTimeString();
+        
+        // Initialize configuration display
+        updateMetricInfo();
+        updateValidationCardsVisibility();
+        
+        // Mark dashboard as ready
+        dashboardReady = true;
+        
+        // Start periodic updates
+        setInterval(updateDashboard, 3000);
+        
+        // Initial update
+        updateDashboard();
+        
+        addLogEntry('Digital Twin Dashboard initialized - KPI metric selection enabled', 'success');
+    });
+
+    // ===== ARENA CONTROL FIX - MINIMAL PATCH =====
+    // Enhanced arena state management
+    window.arenaControlState = {
+        operationInProgress: false,
+        lastStatusUpdate: null,
+        connectionHealth: 'unknown'
+    };
+
+    // Store original functions to preserve existing functionality
+    const originalConnectArena = window.connectArena;
+    const originalLoadModel = window.loadModel;
+    const originalStartSimulation = window.startSimulation;
+    const originalStopSimulation = window.stopSimulation;
+    const originalUpdateArenaButtonStates = window.updateArenaButtonStates;
+
+    // Enhanced operation wrapper for consistent error handling
+    async function performArenaOperationSafely(operationName, originalFunction, buttonId) {
+        if (window.arenaControlState.operationInProgress) {
+            addLogEntry(`Cannot ${operationName}: Another operation is in progress`, 'warning');
+            return;
+        }
+
+        const button = document.getElementById(buttonId);
+        if (!button) return;
+
+        const originalText = button.textContent;
+        try {
+            window.arenaControlState.operationInProgress = true;
+            button.textContent = `${operationName}...`;
+            button.disabled = true;
+
+            // Call original function
+            originalFunction();
+            
+            // Wait for operation to complete
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            
+        } catch (error) {
+            addLogEntry(`${operationName} failed: ${error.message}`, 'error');
+        } finally {
+            window.arenaControlState.operationInProgress = false;
+            button.textContent = originalText;
+            setTimeout(updateDashboard, 500);
+        }
+    }
+
+    // Enhanced button state management
+    function updateArenaButtonStatesSafely(connected, modelLoaded, simState) {
+        if (originalUpdateArenaButtonStates) {
+            originalUpdateArenaButtonStates(connected, modelLoaded, simState);
+        }
+
+        // Additional safety for operations in progress
+        if (window.arenaControlState.operationInProgress) {
+            const buttons = ['connectArenaButton', 'loadModelButton', 'startSimulationButton', 'stopSimulationButton'];
+            buttons.forEach(buttonId => {
+                const button = document.getElementById(buttonId);
+                if (button && !button.textContent.includes('...')) {
+                    button.disabled = true;
+                }
+            });
+        }
+    }
+
+    // Override arena control functions with enhanced versions
+    window.connectArena = function() {
+        return performArenaOperationSafely('Connecting to Arena', originalConnectArena, 'connectArenaButton');
+    };
+
+    window.loadModel = function() {
+        return performArenaOperationSafely('Loading Arena model', originalLoadModel, 'loadModelButton');
+    };
+
+    window.startSimulation = function() {
+        return performArenaOperationSafely('Starting Arena simulation', originalStartSimulation, 'startSimulationButton');
+    };
+
+    window.stopSimulation = function() {
+        return performArenaOperationSafely('Stopping Arena simulation', originalStopSimulation, 'stopSimulationButton');
+    };
+
+    // Override button state update function
+    window.updateArenaButtonStates = updateArenaButtonStatesSafely;
+
+    console.log('Arena Control Fix: Enhanced error handling applied to preserve existing functionality');
+    // ===== END ARENA CONTROL FIX =====
+</script>
+</body>
+</html>

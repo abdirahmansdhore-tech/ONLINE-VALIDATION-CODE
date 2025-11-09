@@ -1,0 +1,18 @@
+import numpy as numpy
+def LCSS(serias1, serias2, epsilon):
+    # serias1 is the sequence containg data generatd from trace-driven simulation and serias2 is from real system & epsilon is threshold parameter
+    """ A variation to the LCSS technique is applied to deal with sequences of real numbers. Differently from LCSS, a matching threshold distance 𝜖 is introduced to 
+    compare real numbers instead of strings. In this case, the information related to the sequence of time values is not considered in the comparison"""
+    matrix = numpy.zeros((len(serias1),(len(serias2)))) # creating matrix to store values of comparison 
+    for i in range(len(serias1)):
+        for j in range(len(serias2)):
+            if abs(serias1[i]-serias2[j])<=epsilon: # comparison 
+                if i == 0 or j == 0:
+                    matrix[i][j] =1
+                else: 
+                    matrix[i][j] = matrix[i-1][j-1]+1
+            else: 
+                matrix[i][j] =max(matrix[i-1][j],matrix[i][j-1])
+    cs = matrix[-1][-1]
+    return cs
+# adapted from https://github.com/giovannilugaresi/digital_twin_validator/blob/main/LCSSR.py
