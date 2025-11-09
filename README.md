@@ -149,7 +149,7 @@ python test_system.py
 1. **Configure**: Edit `config/system_config.json` with your Arena model path
 2. **Start**: Run `START_SYSTEM.bat` or `python start_system.py`
 3. **Access**: Open http://localhost:5000/dashboard_with_trending.html
-4. **Arena Control**: Use the fixed arena control buttons in the dashboard
+4. **Arena Control**: Use the arena control buttons in the dashboard
 5. **Validate**: Start validation campaigns and monitor results
 
 ## 🔍 Troubleshooting
@@ -166,21 +166,10 @@ python test_system.py
 
 ## 📊 Data Sources
 
-- **Station Data**: S1.csv, S2.csv, S3.csv, S5.csv
+- **Station Data**: S1., S2., S3., S5.
 - **System KPIs**: system_kpis.csv
-- **Validation Results**: validation_results.csv
-- **Arena Logs**: log.txt, log.csv
-
-## 🎯 Key Improvements
-
-This cleaned-up version provides:
-- **Streamlined file structure** - No redundant files
-- **Fixed arena controls** - Reliable button operations
-- **Enhanced error handling** - Better user experience
-- **Simplified startup** - Clear entry points
-- **Comprehensive testing** - Verify everything works
-
----
+- **Validation Results**: validation_results.
+- **Arena Logs**: log.txt, log
 
 **Ready to use!** Start with `START_SYSTEM.bat` and access the dashboard at http://localhost:5000/dashboard_with_trending.html
 
