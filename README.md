@@ -66,7 +66,7 @@ python main.py
 
 ## 🔧 System Features
 
-### Arena Control (Fixed & Enhanced)
+### Arena Control 
 - Connect to Arena simulation software
 - Load and manage simulation models
 - Start/stop simulations with robust error handling
