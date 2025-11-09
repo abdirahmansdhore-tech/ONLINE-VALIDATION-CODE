@@ -105,7 +105,7 @@ Edit `config/system_config.json`:
 ## 📁 Clean File Structure
 
 ```
-DTDC_FIXED/
+DTDC
 ├── main.py                          # Main Flask application
 ├── dashboard_with_trending.html     # Web dashboard (with fixes)
 ├── start_system.py                  # Enhanced startup script
