@@ -107,7 +107,7 @@ Edit `config/system_config.json`:
 ```
 DTDC
 ├── main.py                          # Main Flask application
-├── dashboard_with_trending.html     # Web dashboard (with fixes)
+├── dashboard_with_trending.html     # Web dashboard
 ├── start_system.py                  # Enhanced startup script
 ├── test_system.py                   # System test suite
 ├── START_SYSTEM.bat                 # Windows startup
