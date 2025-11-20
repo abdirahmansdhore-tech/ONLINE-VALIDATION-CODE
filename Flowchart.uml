@@ -1,0 +1,154 @@
+@startuml
+!theme plain
+title "Sequence Diagram: Model Drift Detection and Correction"
+
+' === Skin Parameters for a Modern Look ===
+skinparam {
+    shadowing true
+    roundCorner 20
+    defaultFontName "Segoe UI" 
+    defaultFontSize 12
+    participant {
+        bordercolor black
+        backgroundColor #F8F8F8
+    }
+    actor {
+        bordercolor black
+        backgroundColor #ADD8E6 
+    }
+    database {
+        bordercolor black
+        backgroundColor #E6E6FA
+    }
+    control {
+        bordercolor black
+        backgroundColor #F0E68C
+    }
+    boundary {
+        bordercolor black
+        backgroundColor #90EE90
+    }
+    sequenceGroup {
+        backgroundColor #EEEEEE
+        bordercolor black
+    }
+    sequenceGroupHeader {
+        backgroundColor #DDDDDD
+    }
+    note {
+        backgroundColor #F5F5FF
+        borderColor #888888
+    }
+}
+
+hide footbox
+hide stereotype
+
+' === Define All Participants ===
+participant "User" as User <<actor>>
+participant "Physical System" as PS <<actor>>
+participant "Data Manager\n(InfluxDB)" as DM <<database>>
+participant "System Controller\n(Flask)" as SC <<control>>
+participant "Validation Engine" as VE <<component>>
+participant "Calibration Engine" as CE <<component>>
+participant "Model Interface\n(Arena)" as MI <<component>>
+participant "Dashboard" as DB <<boundary>>
+
+' === Start process and parallel data stream ===
+par
+    User -> SC : Start 
+else
+    PS -> DM : [Continuous Stream] Real Event Data
+end
+
+' === STAGE 1: LOGIC VALIDATION ===
+group Logic Validation
+    activate SC
+    SC -> DM : Capture Real Data (for TDS)
+    activate DM
+    DM --> SC : Real Data (Trace 'a')
+    deactivate DM
+    
+    ' --- Controller sends real trace 'a' to Arena to run TDS ---
+    SC -> MI : Run TDS with Real Data (Trace 'a')
+    activate MI
+    MI -> MI : (Runs Arena sim using trace 'a')
+    MI --> SC : return TDS Output (KPI_S_tds)
+    deactivate MI
+    
+    SC -> VE : compute Logic-Level similarity(KPI_R_tds, KPI_S_tds)
+    activate VE
+    VE --> SC : logic_score
+    deactivate VE
+    
+    alt logic_score < threshold (Invalid)
+        SC -> User : "Logic Invalid! Please update model."
+        SC -> DB : update_status("Logic Error!")
+        note right of SC : (Process stops for manual logic update)
+    else logic_score >= threshold (Valid)
+        SC -> DB : update_status("Logic Valid.")
+    end
+    deactivate SC
+end
+
+' === STAGE 2 (Input Validation) & STAGE 3 (Input Calibration) ===
+loop Continuous Input Validation
+    group Input Validation
+        ' --- 2.1: Controller gathers data ---
+        activate SC
+        
+        ' --- 2.1a: Controller gets REAL data ---
+        SC -> DM : Capture Real Data (Inputs 'a', Outputs 'KPI_R')
+        activate DM
+        DM --> SC : return (a, KPI_R)
+        deactivate DM
+        
+        ' --- 2.1b: Controller (the "brain") generates trace 'b' ---
+        SC -> SC : (1. Run qTDS on 'a' to get correlated trace 'b')
+        
+        ' --- 2.1c: Controller tells Arena to run using 'b' ---
+        SC -> MI : Run Arena sim with correlated trace 'b'
+        activate MI
+        MI -> MI : (Runs Arena sim using 'b')
+        MI --> SC : return Simulated Output (KPI_S)
+        deactivate MI
+
+        ' --- 2.2: Controller tells Validation Engine to COMPUTE ---
+        SC -> VE : compute Input-Level similarity(KPI_R, KPI_S)
+        activate VE
+        VE --> SC : input_score (Φ)
+        deactivate VE
+        deactivate SC
+    end
+
+    ' --- 2.3: Decision Point (Valid or Invalid) ---
+    alt input_score >= threshold (Valid)
+        ' --- The Model is Valid ---
+        SC -> DB : update_status("The Model Is Valid", Φ)
+
+    else input_score < threshold (Invalid)
+        ' --- This is STAGE 3: Input Calibration ---
+        group Input Calibration (Primary Contribution)
+            ' --- 3.1: Trigger Diagnosis ---
+            SC -> DB : update_status("Calibrating...", Φ)
+            ' --- Controller sends the input traces (a and b) for diagnosis ---
+            SC -> CE : Identify deviated Parameters using (a, b)
+            activate CE
+            
+            ' --- 3.2: Calibration Engine Estimates & Updates ---
+            CE -> CE : Run BPF to Estimate new parameters
+            CE --> SC : return θ_best (new parameters)
+            deactivate CE
+
+            ' --- 3.3: Model Update ---
+            SC -> MI : Update qTDS parameters(θ_best)
+            activate MI
+            MI -> MI: Overwrite internal Arena parameters
+            MI --> SC : updateComplete
+            deactivate MI
+            SC -> DB : update_status("Valid (Recalibrated)", Φ)
+        end
+        
+    end
+end
+@enduml
